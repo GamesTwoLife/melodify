@@ -2,6 +2,7 @@
 .gitattributes
 .DS_Store
 node_modules/
+downloads/
 dist/
 docs/
 test/

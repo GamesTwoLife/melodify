@@ -68,7 +68,7 @@ export class SpotifyProvider implements IProvider {
 				include_external: include_external
 			}).toString();
 		
-			const response = await fetch(url.toString(), {
+			const response = await fetch(url, {
 				method: "GET",
 				headers: {
 					Authorization: `Bearer ${this.authData.access_token}`
