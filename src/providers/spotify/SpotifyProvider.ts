@@ -9,7 +9,6 @@ export class SpotifyProvider implements IProvider {
 	private readonly clientSecret: string;
 	private authData!: SpotifyAuthResponse;
 	private refreshTimeout: NodeJS.Timeout | null = null;
-	public authenticated: boolean = false;
 
 	constructor(clientId: string, clientSecret: string) {
 		this.clientId = clientId;
@@ -22,24 +21,6 @@ export class SpotifyProvider implements IProvider {
 
 	public get getToken() {
 		return this.authData;
-	}
-
-	public async authenticate() {
-		try {
-			if (this.authenticated) throw new Error("You are already logged")
-			this.authData = await this.getSpotifyAuth();
-
-			this.authenticated = true;
-			
-			console.log("✅ Authorization is successful! Access Token:", this.authData.access_token);
-
-			this.scheduleTokenRefresh();
-		} catch (error) {
-			if (error instanceof Error) {
-				throw new Error(`Error authenticating with Spotify: ${error.message}`);
-			}
-			throw new Error("Unknown error occurred while authenticating with Spotify.");
-		}
 	}
 
 	private async getSpotifyAuth(): Promise<SpotifyAuthResponse> {
@@ -55,45 +36,14 @@ export class SpotifyProvider implements IProvider {
 				}
 			);
 
-			return response.data as SpotifyAuthResponse;
+			this.authData = response.data as SpotifyAuthResponse
+
+			return this.authData;
 		} catch (error) {
 			if (error instanceof Error) {
 				throw new Error(`Error authenticating with Spotify: ${error.message}`);
 			}
 			throw new Error("Unknown error occurred while authenticating with Spotify.");
-		}
-	}
-
-	private scheduleTokenRefresh() {
-		if (this.refreshTimeout) clearTimeout(this.refreshTimeout);
-	
-		const refreshTime = (this.authData.expires_in - 300) * 1000; // Оновлюємо за 5 хв до закінчення
-	
-		this.refreshTimeout = setTimeout(() => {
-		  this.refreshAccessToken();
-		}, refreshTime);
-	}
-
-	private async refreshAccessToken() {
-		try {
-			const response = await axios.post(
-				"https://accounts.spotify.com/api/token",
-				new URLSearchParams({ grant_type: "refresh_token", refresh_token: this.authData.refresh_token }),
-				{
-					headers: {
-						Authorization: `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString("base64")}`,
-						"Content-Type": "application/x-www-form-urlencoded",
-					},
-				}
-			);
-	
-		  	this.authData = await response.data as SpotifyAuthResponse;
-	
-		  	console.log("🔄 The token has been updated:", this.authData.access_token);
-
-		  	this.scheduleTokenRefresh();
-		} catch (error) {
-		  	console.error("❌ Помилка оновлення токена:", error);
 		}
 	}
 
@@ -106,10 +56,9 @@ export class SpotifyProvider implements IProvider {
 		include_external = "audio"
 	): Promise<SearchItemsResponse> {
 		try {
-			if (!this.authenticated) throw new Error("You are not logged in with a spotify account")
-		
+			const token = await this.getSpotifyAuth()
 			const response = await axios.get(`https://api.spotify.com/v1/search`, {
-                headers: { Authorization: `Bearer ${this.authData.access_token}` },
+                headers: { Authorization: `Bearer ${token.access_token}` },
 				params: {
 					q: query,
 					type: type.join(","),
@@ -131,10 +80,9 @@ export class SpotifyProvider implements IProvider {
 
 	async searchTrack(id: Required<string>, market: string = "EN"): Promise<TrackResponse> {
 		try {
-			if (!this.authenticated) throw new Error("Ви не авторизувались через спотіфай")
-
+			const token = await this.getSpotifyAuth()
 			const response = await axios.get(`https://api.spotify.com/v1/tracks/${id}?market=${market}`, {
-                headers: { Authorization: `Bearer ${this.authData.access_token}` }
+                headers: { Authorization: `Bearer ${token.access_token}` }
             });
 
 			return response.data as TrackResponse;
@@ -147,17 +95,17 @@ export class SpotifyProvider implements IProvider {
 	}
 
 	async searchPlaylist(playlist_id: Required<string>, market: string = "EN"): Promise<PlaylistTrackObject[]> {
+		const token = await this.getSpotifyAuth()
 		let allTracks: PlaylistTrackObject[] = [];
 		let offset = 0;
 		const limit = 100;
 
 		try {
-			if (!this.authenticated) throw new Error("Ви не авторизувались через спотіфай")
 			const url = `https://api.spotify.com/v1/playlists/${playlist_id}?market=${market}&limit=${limit}&offset=${offset}`;
     
 			while (true) {
 				const response = await axios.get(url, {
-					headers: { Authorization: `Bearer ${this.authData.access_token}` }
+					headers: { Authorization: `Bearer ${token.access_token}` }
 				});
 	
 				const data = response.data as PlaylistResponse;
@@ -181,11 +129,11 @@ export class SpotifyProvider implements IProvider {
 
 	async searchAlbum(album_id: Required<string>, market: string = "EN"): Promise<AlbumResponse> {
 		try {
-			if (!this.authenticated) throw new Error("Ви не авторизувались через спотіфай")
+			const token = await this.getSpotifyAuth()
 			const url = `https://api.spotify.com/v1/albums/${album_id}?market=${market}`;
     
 			const response = await axios.get(url, {
-				headers: { Authorization: `Bearer ${this.authData.access_token}` }
+				headers: { Authorization: `Bearer ${token.access_token}` }
 			});
 
 			return response.data as AlbumResponse;
@@ -199,11 +147,11 @@ export class SpotifyProvider implements IProvider {
 
 	async searchArtist(id: Required<string>, market: string = "EN"): Promise<ArtistResponse> {
 		try {
-			if (!this.authenticated) throw new Error("Ви не авторизувались через спотіфай")
+			const token = await this.getSpotifyAuth()
 			const url = `https://api.spotify.com/v1/artists/${id}?market=${market}`;
     
 			const response = await axios.get(url, {
-				headers: { Authorization: `Bearer ${this.authData.access_token}` }
+				headers: { Authorization: `Bearer ${token.access_token}` }
 			});
 
 			return response.data as ArtistResponse;
