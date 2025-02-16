@@ -1,4 +1,4 @@
-import { AlbumResponse, ArtistResponse, PlaylistResponse, SearchItemsResponse, TrackResponse } from "../../models";
+import { AlbumResponse, ArtistResponse, PlaylistResponse, PlaylistTrackObject, SearchItemsResponse, TrackResponse } from "../../models";
 import { IProvider, SearchItemType } from "../interfaces/IProvider";
 
 type SpotifyAuthResponse = { access_token: string; token_type: "Bearer"; expires_in: number; };
@@ -116,25 +116,38 @@ export class SpotifyProvider implements IProvider {
 		}
 	}
 
-	async searchPlaylist(playlist_id: Required<string>, market: string = "EN"): Promise<PlaylistResponse> {
+	async searchPlaylist(playlist_id: Required<string>, market: string = "EN"): Promise<PlaylistTrackObject[]> {
+		let allTracks: PlaylistTrackObject[] = [];
+		let offset = 0;
+		const limit = 100;
+
 		try {
 			if (!this.authenticated) throw new Error("Ви не авторизувались через спотіфай")
-			const url = `https://api.spotify.com/v1/playlists/${playlist_id}?market=${market}`;
+			const url = `https://api.spotify.com/v1/playlists/${playlist_id}?market=${market}&limit=${limit}&offset=${offset}`;
     
-			const response = await fetch(url, {
-				method: "GET",
-				headers: {
-					Authorization: `Bearer ${this.authData.access_token}`
+			while (true) {
+				const response = await fetch(url, {
+					method: "GET",
+					headers: {
+						Authorization: `Bearer ${this.authData.access_token}`
+					}
+				});
+	
+				if (!response.ok) {
+					throw new Error(`HTTP error! Status: ${response.status}`);
 				}
-			});
-
-			if (!response.ok) {
-				throw new Error(`HTTP error! Status: ${response.status}`);
+	
+				const data = await response.json() as PlaylistResponse;
+	
+				const tracks = data.tracks.items as PlaylistTrackObject[];
+				allTracks.push(...tracks);
+	
+				if (tracks.length < limit) break;
+	
+				offset += limit;
 			}
 
-			const data = await response.json() as PlaylistResponse;
-
-			return data;
+			return allTracks;
 		} catch (error) {
 			if (error instanceof Error) {
 				throw new Error(`Error search with Spotify: ${error.message}`);

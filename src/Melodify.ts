@@ -41,7 +41,7 @@ export class Melodify {
 	 * @param query Query from spotify response
 	 * @param format Audio format for download (For best quality recommended "best" or "opus")
 	 */
-	public async downloadTrack(query: string, format: AudioFormat = "best") {
-		await this.downloadManager.downloadAudio(query, format);
+	public async downloadTrack(query: string, format: AudioFormat = "best"): Promise<string> {
+		return await this.downloadManager.downloadAudio(query, format);
 	}
 }

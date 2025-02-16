@@ -2,13 +2,13 @@ type AlbumType = "album" | "single" | "compilation";
 type ReleaseDatePrecision = "year" | "month" | "day";
 type RestrictionsReason = "market" | "product" | "explicit";
 
-interface ImageObject {
+export interface ImageObject {
 	url: Required<string>,
 	height: Required<number | null>,
 	width: Required<number | null>
 }
 
-interface CopyrightObject {
+export interface CopyrightObject {
 	text: string,
 	type: string
 }
@@ -142,7 +142,7 @@ interface ArtistObject {
 	uri: string
 }
 
-interface PlaylistTrackObject {
+export interface PlaylistTrackObject {
 	added_at: string,
 	added_by: {
 		external_urls: {
@@ -161,7 +161,7 @@ interface PlaylistTrackObject {
 	track: TrackObject | EpisodeObject
 }
 
-interface SimplifiedTrackObject {
+export interface SimplifiedTrackObject {
 	artists: Required<ArtistObject[]>,
 	available_markets: string[],
 	disc_number: number,
@@ -193,7 +193,7 @@ interface SimplifiedTrackObject {
 	is_local: boolean
 }
 
-interface SimplifiedArtistObject {
+export interface SimplifiedArtistObject {
 	external_urls: {
 		spotify: string
 	},
@@ -204,7 +204,7 @@ interface SimplifiedArtistObject {
 	uri: string
 }
 
-interface SimplifiedAlbumObject {
+export interface SimplifiedAlbumObject {
 	album_type: Required<AlbumType>,
 	total_tracks: Required<number>,
 	available_markets: Required<string[]>,
@@ -225,7 +225,7 @@ interface SimplifiedAlbumObject {
 	artists:  Required<SimplifiedArtistObject[]>
 }
 
-interface SimplifiedPlaylistObject {
+export interface SimplifiedPlaylistObject {
 	collaborative: boolean,
 	description: string,
 	external_urls: {
@@ -259,7 +259,7 @@ interface SimplifiedPlaylistObject {
 	uri: string
 }
 
-interface SimplifiedShowObject {
+export interface SimplifiedShowObject {
 	available_markets: Required<string[]>,
 	copyrights: Required<CopyrightObject>,
 	description: Required<string>,
@@ -281,7 +281,7 @@ interface SimplifiedShowObject {
 	total_episodes: Required<number>
 }
 
-interface SimplifiedEpisodeObject {
+export interface SimplifiedEpisodeObject {
 	/**
 	 * @deprecated
 	 * @description A URL to a 30 second preview (MP3 format) of the episode. null if not available.
@@ -319,7 +319,7 @@ interface SimplifiedEpisodeObject {
 	}
 }
 
-interface SimplifiedAudiobookObject {
+export interface SimplifiedAudiobookObject {
 	authors: [{
 		name: string
 	}],
@@ -372,7 +372,7 @@ export interface SearchItemsResponse {
 		offset: Required<number>,
 		previous: Required<string | null>,
 		total: Required<number>,
-		items: Required<ArtistObject>
+		items: Required<ArtistObject[]>
 	}
 	albums?: {
 		href: Required<string>,
@@ -408,7 +408,7 @@ export interface SearchItemsResponse {
 		offset: Required<number>,
 		previous: Required<string | null>,
 		total: Required<number>,
-		items: Required<SimplifiedEpisodeObject>
+		items: Required<SimplifiedEpisodeObject[]>
 	}
 	audiobooks?: {
 		href: Required<string>,
@@ -417,7 +417,7 @@ export interface SearchItemsResponse {
 		offset: Required<number>,
 		previous: Required<string | null>,
 		total: Required<number>,
-		items: Required<SimplifiedAudiobookObject>
+		items: Required<SimplifiedAudiobookObject[]>
 	}
 }
 

@@ -14,7 +14,7 @@ export type AudioFormat =
 	'wav'
 
 export class DownloadManager {
-	private downloadPath: string = './downloads'
+	private downloadPath: string = resolve(__dirname, "../downloads")
 	private ytDlpChecked = false;
 
 	constructor() {
