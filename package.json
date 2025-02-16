@@ -1,6 +1,6 @@
 {
   "name": "@gamestwolife/melodify",
-  "version": "1.0.8",
+  "version": "1.0.9-dev",
   "description": "A stable and updated music service",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -38,5 +38,8 @@
     "tsup": "^8.3.6",
     "typedoc": "^0.27.7",
     "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "axios": "^1.7.9"
   }
 }

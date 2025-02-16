@@ -1,3 +1,4 @@
+import axios from "axios";
 import { AlbumResponse, ArtistResponse, PlaylistResponse, PlaylistTrackObject, SearchItemsResponse, TrackResponse } from "../../models";
 import { IProvider, SearchItemType } from "../interfaces/IProvider";
 
@@ -25,10 +26,12 @@ export class SpotifyProvider implements IProvider {
 
 	public async authenticate() {
 		try {
+			if (this.authenticated) throw new Error("You are already logged")
 			this.authData = await this.getSpotifyAuth();
 
-			console.log("✅ Авторизація успішна! Access Token:", this.authData.access_token);
 			this.authenticated = true;
+			
+			console.log("✅ Authorization is successful! Access Token:", this.authData.access_token);
 
 			this.scheduleTokenRefresh();
 		} catch (error) {
@@ -41,20 +44,18 @@ export class SpotifyProvider implements IProvider {
 
 	private async getSpotifyAuth(): Promise<SpotifyAuthResponse> {
 		try {
-			const response = await fetch("https://accounts.spotify.com/api/token", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/x-www-form-urlencoded",
-					Authorization: "Basic " + Buffer.from(`${this.clientId}:${this.clientSecret}`).toString("base64"),
-				},
-				body: new URLSearchParams({
-					grant_type: "client_credentials",
-				}),
-			});
-			
-			if (!response.ok) throw new Error("Не вдалося отримати access_token");
-			
-			return await response.json() as SpotifyAuthResponse;
+			const response = await axios.post(
+				"https://accounts.spotify.com/api/token",
+				new URLSearchParams({ grant_type: "client_credentials" }),
+				{
+					headers: {
+						Authorization: `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString("base64")}`,
+						"Content-Type": "application/x-www-form-urlencoded",
+					},
+				}
+			);
+
+			return response.data as SpotifyAuthResponse;
 		} catch (error) {
 			if (error instanceof Error) {
 				throw new Error(`Error authenticating with Spotify: ${error.message}`);
@@ -75,28 +76,24 @@ export class SpotifyProvider implements IProvider {
 
 	private async refreshAccessToken() {
 		try {
-		  const response = await fetch("https://accounts.spotify.com/api/token", {
-			method: "POST",
-			headers: {
-			  "Content-Type": "application/x-www-form-urlencoded",
-			  Authorization: "Basic " + Buffer.from(`${this.clientId}:${this.clientSecret}`).toString("base64"),
-			},
-			body: new URLSearchParams({
-			  grant_type: "refresh_token",
-			  refresh_token: this.authData.refresh_token,
-			}),
-		  });
+			const response = await axios.post(
+				"https://accounts.spotify.com/api/token",
+				new URLSearchParams({ grant_type: "refresh_token", refresh_token: this.authData.refresh_token }),
+				{
+					headers: {
+						Authorization: `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString("base64")}`,
+						"Content-Type": "application/x-www-form-urlencoded",
+					},
+				}
+			);
 	
-		  if (!response.ok) throw new Error("Не вдалося оновити токен!");
+		  	this.authData = await response.data as SpotifyAuthResponse;
 	
-		  this.authData = await response.json() as SpotifyAuthResponse;
-	
-		  console.log("🔄 Токен оновлено:", this.authData.access_token);
-	
-		  // Перезапускаємо таймер на оновлення
-		  this.scheduleTokenRefresh();
+		  	console.log("🔄 The token has been updated:", this.authData.access_token);
+
+		  	this.scheduleTokenRefresh();
 		} catch (error) {
-		  console.error("❌ Помилка оновлення токена:", error);
+		  	console.error("❌ Помилка оновлення токена:", error);
 		}
 	}
 
@@ -111,21 +108,19 @@ export class SpotifyProvider implements IProvider {
 		try {
 			if (!this.authenticated) throw new Error("You are not logged in with a spotify account")
 		
-			const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=${type.join(",")}&market=${market}&limit=${limit}&offset=${offset}&include_external=${include_external}`, {
-				method: "GET",
-				headers: {
-					Authorization: `Bearer ${this.authData.access_token}`,
-      				'Content-Type': 'application/json'
-				}
-			});
-		
-			if (!response.ok) {
-				throw new Error(`HTTP error! Status: ${response.status}`);
-			}
-		
-			const data = (await response.json()) as SearchItemsResponse;
+			const response = await axios.get(`https://api.spotify.com/v1/search`, {
+                headers: { Authorization: `Bearer ${this.authData.access_token}` },
+				params: {
+					q: query,
+					type: type.join(","),
+					market,
+					limit,
+					offset,
+					include_external
+				},
+            });
 
-			return data;
+			return response.data as SearchItemsResponse;
 		} catch (error) {
 			if (error instanceof Error) {
 				throw new Error(`Error search with Spotify: ${error.message}`);
@@ -137,22 +132,12 @@ export class SpotifyProvider implements IProvider {
 	async searchTrack(id: Required<string>, market: string = "EN"): Promise<TrackResponse> {
 		try {
 			if (!this.authenticated) throw new Error("Ви не авторизувались через спотіфай")
-			const url = `https://api.spotify.com/v1/tracks/${id}?market=${market}`;
-    
-			const response = await fetch(url, {
-				method: "GET",
-				headers: {
-					Authorization: `Bearer ${this.authData.access_token}`,
-      				'Content-Type': 'application/json'
-				}
-			});
 
-			if (!response.ok) {
-				throw new Error(`HTTP error! Status: ${response.status}`);
-			}
+			const response = await axios.get(`https://api.spotify.com/v1/tracks/${id}?market=${market}`, {
+                headers: { Authorization: `Bearer ${this.authData.access_token}` }
+            });
 
-			const data = await response.json() as TrackResponse;
-			return data;
+			return response.data as TrackResponse;
 		} catch (error) {
 			if (error instanceof Error) {
 				throw new Error(`Error search with Spotify: ${error.message}`);
@@ -171,19 +156,11 @@ export class SpotifyProvider implements IProvider {
 			const url = `https://api.spotify.com/v1/playlists/${playlist_id}?market=${market}&limit=${limit}&offset=${offset}`;
     
 			while (true) {
-				const response = await fetch(url, {
-					method: "GET",
-					headers: {
-						Authorization: `Bearer ${this.authData.access_token}`,
-      					'Content-Type': 'application/json'
-					}
+				const response = await axios.get(url, {
+					headers: { Authorization: `Bearer ${this.authData.access_token}` }
 				});
 	
-				if (!response.ok) {
-					throw new Error(`HTTP error! Status: ${response.status}`);
-				}
-	
-				const data = await response.json() as PlaylistResponse;
+				const data = response.data as PlaylistResponse;
 	
 				const tracks = data.tracks.items as PlaylistTrackObject[];
 				allTracks.push(...tracks);
@@ -207,20 +184,11 @@ export class SpotifyProvider implements IProvider {
 			if (!this.authenticated) throw new Error("Ви не авторизувались через спотіфай")
 			const url = `https://api.spotify.com/v1/albums/${album_id}?market=${market}`;
     
-			const response = await fetch(url, {
-				method: "GET",
-				headers: {
-					Authorization: `Bearer ${this.authData.access_token}`,
-      				'Content-Type': 'application/json'
-				}
+			const response = await axios.get(url, {
+				headers: { Authorization: `Bearer ${this.authData.access_token}` }
 			});
 
-			if (!response.ok) {
-				throw new Error(`HTTP error! Status: ${response.status}`);
-			}
-
-			const data = await response.json() as AlbumResponse;
-			return data;
+			return response.data as AlbumResponse;
 		} catch (error) {
 			if (error instanceof Error) {
 				throw new Error(`Error search with Spotify: ${error.message}`);
@@ -234,20 +202,11 @@ export class SpotifyProvider implements IProvider {
 			if (!this.authenticated) throw new Error("Ви не авторизувались через спотіфай")
 			const url = `https://api.spotify.com/v1/artists/${id}?market=${market}`;
     
-			const response = await fetch(url, {
-				method: "GET",
-				headers: {
-					Authorization: `Bearer ${this.authData.access_token}`,
-      				'Content-Type': 'application/json'
-				}
+			const response = await axios.get(url, {
+				headers: { Authorization: `Bearer ${this.authData.access_token}` }
 			});
 
-			if (!response.ok) {
-				throw new Error(`HTTP error! Status: ${response.status}`);
-			}
-
-			const data = await response.json() as ArtistResponse;
-			return data;
+			return response.data as ArtistResponse;
 		} catch (error) {
 			if (error instanceof Error) {
 				throw new Error(`Error search with Spotify: ${error.message}`);
