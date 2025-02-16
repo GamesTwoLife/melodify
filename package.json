@@ -1,6 +1,6 @@
 {
   "name": "@gamestwolife/melodify",
-  "version": "1.0.3-dev",
+  "version": "1.0.3",
   "description": "A stable and updated music service",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -23,10 +23,10 @@
     "type": "git",
     "url": "git+https://github.com/GamesTwoLife/melodify.git"
   },
-	"bugs": {
-		"url": "https://github.com/GamesTwoLife/melodify/issues"
-	},
-	"homepage": "https://github.com/GamesTwoLife/melodify#readme",
+  "bugs": {
+    "url": "https://github.com/GamesTwoLife/melodify/issues"
+  },
+  "homepage": "https://github.com/GamesTwoLife/melodify#readme",
   "scripts": {
     "build": "npm run build:ts && npm run build:docs",
     "build:ts": "tsup --config tsup-config.json",
