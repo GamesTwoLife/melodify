@@ -1,0 +1,17 @@
+.github
+.idea
+.vscode
+.gitattributes
+.gitignore
+assets/
+docs/
+src/
+test/
+tests/
+index.ts
+tsconfig.json
+tsup-config.json
+package-lock.json
+eslint.config.mjs
+**.tgz
+**.md

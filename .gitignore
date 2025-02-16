@@ -1,0 +1,13 @@
+.idea
+.gitattributes
+.DS_Store
+node_modules/
+dist/
+test/
+tests/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+yarn-debug.log*
+yarn-error.log*
+**.tgz
