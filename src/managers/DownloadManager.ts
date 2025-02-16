@@ -14,7 +14,7 @@ export type AudioFormat =
 	'wav'
 
 export class DownloadManager {
-	private downloadPath: string = resolve(__dirname, "../downloads")
+	public readonly downloadPath: string = resolve(__dirname, "../downloads");
 	private ytDlpChecked = false;
 
 	constructor() {
@@ -37,7 +37,7 @@ export class DownloadManager {
 			this.ytDlpChecked = true;
 		} catch (error) {
 			throw new Error(
-				'yt-dlp не знайдено! Встановіть з https://github.com/yt-dlp/yt-dlp дотримуючись усіх інструкцій'
+				'yt-dlp not found! Install from https://github.com/yt-dlp/yt-dlp following all instructions'
 			);
 		}
 	}
@@ -69,10 +69,10 @@ export class DownloadManager {
 					if (filePath) {
 						resolve(filePath);
 					} else {
-						reject(new Error('Не вдалося отримати шлях до файлу'));
+						reject(new Error('Could not get the path to the file'));
 					}
 				} else {
-					reject(new Error(`yt-dlp завершено з помилкою (код ${code})`));
+					reject(new Error(`yt-dlp failed with an error (code ${code})`));
 				}
 			});
 		});

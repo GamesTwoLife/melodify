@@ -14,7 +14,7 @@ export class SpotifyProvider implements IProvider {
 		this.clientSecret = clientSecret;
 
 		if (!this.clientId && !this.clientSecret) {
-			throw new Error("clientId & clientSecret обов'язкові")
+			throw new Error("clientId & clientSecret are required")
 		}
 	}
 
@@ -57,7 +57,7 @@ export class SpotifyProvider implements IProvider {
 		include_external = "audio"
 	): Promise<SearchItemsResponse> {
 		try {
-			if (!this.authenticated) throw new Error("Ви не авторизувались через спотіфай")
+			if (!this.authenticated) throw new Error("You are not logged in with a spotify account")
 			const url = new URL("https://api.spotify.com/v1/search");
 			url.search = new URLSearchParams({
 				q: query,

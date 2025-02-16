@@ -124,7 +124,7 @@ export interface EpisodeObject {
 	}>,
 }
 
-interface ArtistObject {
+export interface ArtistObject {
 	external_urls: {
 		spotify: string
 	},
