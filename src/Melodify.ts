@@ -17,8 +17,9 @@ export interface MelodifyOptions {
  * Main Melodify class
  */
 export class Melodify {
+	private downloadManager: DownloadManager = new DownloadManager();
 	public spotifyProvider: SpotifyProvider;
-	private downloadManager: DownloadManager = new DownloadManager()
+	public downloadPath: string = this.downloadManager.downloadPath;
 
 	/**
 	 * Melodify Options
