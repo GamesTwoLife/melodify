@@ -16,17 +16,24 @@ export class SpotifyProvider implements IProvider {
 	}
 
 	private async getSpotifyAuth(): Promise<string> {
-		const response = await axios.post("https://accounts.spotify.com/api/token", 
-			new URLSearchParams({ grant_type: "client_credentials" }),
-			{ 
-				headers: { 
-					Authorization: `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString("base64")}`,
-					"Content-Type": "application/x-www-form-urlencoded"
+		try {
+			const response = await axios.post(
+				'https://accounts.spotify.com/api/token',
+				{
+					headers: {
+						'Authorization': 'Basic ' + Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64'),
+						'Content-Type': 'application/x-www-form-urlencoded'
+					},
+					params: {
+						grant_type: 'client_credentials'
+					}
 				}
-			}
-		);
+			);
 
-		return response.data.access_token as string;
+			return response.data.access_token as string;
+		} catch (error) {
+			throw new Error(`Error fetching Spotify token: ${error}`);
+		}
 	}
 
 	async search(
@@ -40,24 +47,24 @@ export class SpotifyProvider implements IProvider {
 		const token = await this.getSpotifyAuth()
 
 		try {
-			const response = await axios.get(`https://api.spotify.com/v1/search`, {
-                headers: { Authorization: `Bearer ${token}` },
-				params: {
-					q: query,
-					type: type.join(","),
-					market,
-					limit,
-					offset,
-					include_external
-				},
-            });
+			const response = await axios.post(
+				'https://api.spotify.com/v1/search',
+				{
+					headers: { 'Authorization': `Bearer ${token}` },
+					params: {
+						q: query,
+						type: type.join(","),
+						market,
+						limit: limit.toString(),
+						offset: offset.toString(),
+						include_external,
+					}
+				}
+			);
 
 			return response.data as SearchItemsResponse;
 		} catch (error) {
-			if (error instanceof Error) {
-				throw new Error(`Error search with Spotify: ${error.message}`);
-			}
-			throw new Error("Unknown error occurred while search with Spotify.");
+			throw new Error(`Error search with Spotify: ${error}`);
 		}
 	}
 
@@ -65,16 +72,21 @@ export class SpotifyProvider implements IProvider {
 		const token = await this.getSpotifyAuth()
 
 		try {
-			const response = await axios.get(`https://api.spotify.com/v1/tracks/${id}?market=${market}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+			const response = await axios.post(
+				`https://api.spotify.com/v1/tracks/${id}`,
+				{
+					headers: {
+						'Authorization': `Bearer ${token}`
+					},
+					params: {
+						market: market
+					}
+				}
+			);
 
 			return response.data as TrackResponse;
 		} catch (error) {
-			if (error instanceof Error) {
-				throw new Error(`Error search with Spotify: ${error.message}`);
-			}
-			throw new Error("Unknown error occurred while search with Spotify.");
+			throw new Error(`Error search with Spotify: ${error}`);
 		}
 	}
 
@@ -86,12 +98,18 @@ export class SpotifyProvider implements IProvider {
 		const limit = 100;
 
 		try {
-			const url = `https://api.spotify.com/v1/playlists/${playlist_id}?market=${market}&limit=${limit}&offset=${offset}`;
-    
 			while (true) {
-				const response = await axios.get(url, {
-					headers: { Authorization: `Bearer ${token}` }
-				});
+				const response = await axios.get(
+					`https://api.spotify.com/v1/playlists/${playlist_id}`,
+					{
+						headers: { 'Authorization': `Bearer ${token}` },
+						params: {
+							market: market,
+							limit: limit.toString(),
+							offset: offset.toString()
+						}
+					}
+				);
 	
 				const data = response.data as PlaylistResponse;
 	
@@ -105,10 +123,7 @@ export class SpotifyProvider implements IProvider {
 
 			return allTracks;
 		} catch (error) {
-			if (error instanceof Error) {
-				throw new Error(`Error search with Spotify: ${error.message}`);
-			}
-			throw new Error("Unknown error occurred while search with Spotify.");
+			throw new Error(`Error search with Spotify: ${error}`);
 		}
 	}
 
@@ -119,7 +134,7 @@ export class SpotifyProvider implements IProvider {
 			const url = `https://api.spotify.com/v1/albums/${album_id}?market=${market}`;
     
 			const response = await axios.get(url, {
-				headers: { Authorization: `Bearer ${token}` }
+				headers: { 'Authorization': `Bearer ${token}` }
 			});
 
 			return response.data as AlbumResponse;
@@ -138,7 +153,7 @@ export class SpotifyProvider implements IProvider {
 			const url = `https://api.spotify.com/v1/artists/${id}?market=${market}`;
     
 			const response = await axios.get(url, {
-				headers: { Authorization: `Bearer ${token}` }
+				headers: { 'Authorization': `Bearer ${token}` }
 			});
 
 			return response.data as ArtistResponse;
