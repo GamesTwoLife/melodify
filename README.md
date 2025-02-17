@@ -20,14 +20,14 @@ const clientSecret = "your-client-secret";
 		spotifyClientId: clientId,
 		spotifyClientSecret: clientSecret
 	});
-
-	const authData = await melodify.spotifyProvider.authenticate()
-
-	console.log(authData)
 	
 	const search = await melodify.spotifyProvider.search("Never Gonna Give You Up", ["track"], "UA");
 
-	await melodify.downloadTrack(search.tracks?.items[0].name);
+	console.log(search)
+
+	const downloaded = await melodify.downloadTrack(search.tracks?.items[0].name);
+
+	console.log(downloaded)
 })()
 ```
 
