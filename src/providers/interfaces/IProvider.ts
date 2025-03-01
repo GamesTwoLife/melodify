@@ -14,7 +14,7 @@ export interface IProvider {
 	): Promise<TrackObject | AlbumResponse | SearchItemsResponse | PlaylistResponse>;
 	searchTrack(id: string, market?: string): Promise<TrackResponse>;
 	searchPlaylistInfo(playlist_id: string, market?: string): Promise<PlaylistResponse>;
-	searchPlaylist(playlist_id: string, market?: string): Promise<ExtendedPlaylistResponse>;
+	searchPlaylistTracks(playlist_id: string, market?: string): Promise<ExtendedPlaylistResponse>;
 	searchAlbum(album_id: string, market?: string): Promise<AlbumResponse>;
 	searchArtist(id: string, market?: string): Promise<ArtistResponse>;
 	searchArtistTopTracks(id: string, market?: string): Promise<TrackObject>;

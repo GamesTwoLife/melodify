@@ -139,11 +139,7 @@ export class SpotifyProvider implements IProvider {
 				`https://api.spotify.com/v1/playlists/${playlist_id}`,
 				{
 					headers: { 'Authorization': `Bearer ${token}` },
-					params: {
-						market: market,
-						limit: 100,
-						offset: 0
-					}
+					params: { market: market, limit: 100, offset: 0 }
 				}
 			);
 
@@ -153,22 +149,20 @@ export class SpotifyProvider implements IProvider {
 		}
 	}
 
-	async searchPlaylist(playlist_id: Required<string>, market: string = "US"): Promise<ExtendedPlaylistResponse> {
+	async searchPlaylistTracks(playlist_id: Required<string>, market: string = "US"): Promise<ExtendedPlaylistResponse> {
 		const token = await this.getSpotifyAuth()
+
+		const playlistMetaResponse = await this.searchPlaylistInfo(playlist_id, market);
+		const { name, owner, external_urls, images } = playlistMetaResponse;
 
 		let allTracks: PlaylistTrackObject[] = [];
 		let offset = 0;
 		const limit = 100;
 
-		let playlistName = '';
-		let playlistUrl = '';
-		let playlistOwner: UserObject | null = null;
-		let playlistImages: ImageObject[] = [];
-
 		try {
 			while (true) {
-				const response = await axios.get(
-					`https://api.spotify.com/v1/playlists/${playlist_id}`,
+				const tracksResponse = await axios.get(
+					`https://api.spotify.com/v1/playlists/${playlist_id}/tracks`,
 					{
 						headers: { 'Authorization': `Bearer ${token}` },
 						params: {
@@ -179,28 +173,20 @@ export class SpotifyProvider implements IProvider {
 					}
 				);
 	
-				const data = response.data as PlaylistResponse;
+				const tracksData = tracksResponse.data.items as PlaylistTrackObject[];
 
-				if (offset === 0) {
-					playlistName = data.name;
-					playlistUrl = data.external_urls.spotify;
-					playlistOwner = data.owner;
-					playlistImages = data.images;
-				}
+				allTracks.push(...tracksData);
 
-				const tracks = data.tracks.items;
-				allTracks.push(...tracks);
-	
-				if (tracks.length < limit) break;
-	
+				if (tracksData.length < limit) break;
+
 				offset += limit;
 			}
 
 			return  {
-				playlistName,
-				playlistUrl,
-				playlistOwner: playlistOwner!,
-				playlistImages,
+				playlistName: name,
+				playlistUrl: external_urls.spotify,
+				playlistOwner: owner,
+				playlistImages: images,
 				tracks: allTracks
 			};
 		} catch (error) {
