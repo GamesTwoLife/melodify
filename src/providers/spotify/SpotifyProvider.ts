@@ -1,6 +1,6 @@
 import axios from "axios";
 import { AlbumResponse, ArtistResponse, ExtendedPlaylistResponse, ImageObject, PlaylistResponse, PlaylistTrackObject, SearchItemsResponse, TrackObject, TrackResponse, UserObject } from "../../models";
-import { IProvider, SearchItemType, SearchResponse } from "../interfaces/IProvider";
+import { IProvider, SearchItemType } from "../interfaces/IProvider";
 
 export class SpotifyProvider implements IProvider {
 	private readonly clientId: string;
@@ -36,7 +36,7 @@ export class SpotifyProvider implements IProvider {
 		}
 	}
 
-	async getAvailableMarkets() {
+	async getAvailableMarkets(): Promise<{ markets: string[]; }> {
 		const token = await this.getSpotifyAuth()
 
 		try {
@@ -60,7 +60,7 @@ export class SpotifyProvider implements IProvider {
 		limit: number = 25,
 		offset: number = 0,
 		include_external = "audio"
-	): Promise<SearchResponse> {
+	): Promise<TrackObject | AlbumResponse | SearchItemsResponse | PlaylistResponse> {
 		const token = await this.getSpotifyAuth()
 
 		const spotifyLinkRegex = /https:\/\/open\.spotify\.com\/(track|album|playlist|artist)\/([a-zA-Z0-9]{22})(\?si=[a-z0-9]+)?/;
@@ -78,7 +78,7 @@ export class SpotifyProvider implements IProvider {
 						return await this.searchAlbum(id, market);
 					
 					case "playlist":
-						return await this.searchPlaylist(id, market);
+						return await this.searchPlaylistInfo(id, market);
 					
 					case "artist":
 						return await this.searchArtistTopTracks(id, market);
@@ -126,6 +126,28 @@ export class SpotifyProvider implements IProvider {
 			);
 
 			return response.data as TrackResponse;
+		} catch (error) {
+			throw new Error(`Error search with Spotify: ${error}`);
+		}
+	}
+
+	async searchPlaylistInfo(playlist_id: Required<string>, market: string = "US"): Promise<PlaylistResponse> {
+		const token = await this.getSpotifyAuth()
+
+		try {
+			const response = await axios.get(
+				`https://api.spotify.com/v1/playlists/${playlist_id}`,
+				{
+					headers: { 'Authorization': `Bearer ${token}` },
+					params: {
+						market: market,
+						limit: 100,
+						offset: 0
+					}
+				}
+			);
+
+			return response.data as PlaylistResponse;
 		} catch (error) {
 			throw new Error(`Error search with Spotify: ${error}`);
 		}

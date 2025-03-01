@@ -1,13 +1,9 @@
-import { AlbumResponse, ArtistResponse, ExtendedPlaylistResponse, SearchItemsResponse, TrackObject, TrackResponse } from "../../models";
+import { AlbumResponse, ArtistResponse, ExtendedPlaylistResponse, PlaylistResponse, SearchItemsResponse, TrackObject, TrackResponse } from "../../models";
 
 export type SearchItemType = 'album' | 'artist' | 'playlist' | 'track' | 'show' | 'episode' | 'audiobook';
-export type SearchResponse =
-	TrackObject |
-	AlbumResponse |
-	SearchItemsResponse |
-	ExtendedPlaylistResponse
 
 export interface IProvider {
+	getAvailableMarkets(): Promise<{ markets: string[]; }>;
 	search(
 		query: string,
 		type: Required<SearchItemType[]>,
@@ -15,8 +11,9 @@ export interface IProvider {
 		limit?: number,
 		offcet?: number,
 		include_external?: "audio"
-	): Promise<SearchResponse>;
+	): Promise<TrackObject | AlbumResponse | SearchItemsResponse | PlaylistResponse>;
 	searchTrack(id: string, market?: string): Promise<TrackResponse>;
+	searchPlaylistInfo(playlist_id: string, market?: string): Promise<PlaylistResponse>;
 	searchPlaylist(playlist_id: string, market?: string): Promise<ExtendedPlaylistResponse>;
 	searchAlbum(album_id: string, market?: string): Promise<AlbumResponse>;
 	searchArtist(id: string, market?: string): Promise<ArtistResponse>;
