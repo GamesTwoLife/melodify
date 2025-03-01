@@ -1,6 +1,6 @@
 import axios from "axios";
-import { AlbumResponse, ArtistResponse, PlaylistResponse, PlaylistTrackObject, SearchItemsResponse, TrackResponse } from "../../models";
-import { IProvider, SearchItemType } from "../interfaces/IProvider";
+import { AlbumResponse, ArtistResponse, ExtendedPlaylistResponse, ImageObject, PlaylistResponse, PlaylistTrackObject, SearchItemsResponse, TrackObject, TrackResponse, UserObject } from "../../models";
+import { IProvider, SearchItemType, SearchResponse } from "../interfaces/IProvider";
 
 export class SpotifyProvider implements IProvider {
 	private readonly clientId: string;
@@ -36,17 +36,58 @@ export class SpotifyProvider implements IProvider {
 		}
 	}
 
-	async search(
-		query: Required<string>,
-		type: Required<SearchItemType[]>,
-		market: string = "EN",
-		limit: number = 25,
-		offset: number = 0,
-		include_external = "audio"
-	): Promise<SearchItemsResponse> {
+	async getAvailableMarkets() {
 		const token = await this.getSpotifyAuth()
 
 		try {
+			const response = await axios.get(
+				'https://api.spotify.com/v1/markets',
+				{
+					headers: { 'Authorization': `Bearer ${token}` }
+				}
+			);
+
+			return response.data as { markets: string[] };
+		} catch (error) {
+			throw new Error(`Error search with Spotify: ${error}`);
+		}
+	}
+
+	async search(
+		query: Required<string>,
+		type: Required<SearchItemType[]>,
+		market: string = "US",
+		limit: number = 25,
+		offset: number = 0,
+		include_external = "audio"
+	): Promise<SearchResponse> {
+		const token = await this.getSpotifyAuth()
+
+		const spotifyLinkRegex = /https:\/\/open\.spotify\.com\/(track|album|playlist|artist)\/([a-zA-Z0-9]{22})(\?si=[a-z0-9]+)?/;
+    	const match = query.match(spotifyLinkRegex);
+
+		try {
+			if (match) {
+				const [, linkType, id] = match;
+
+				switch (linkType) {
+					case "track":
+						return await this.searchTrack(id, market);
+					
+					case "album":
+						return await this.searchAlbum(id, market);
+					
+					case "playlist":
+						return await this.searchPlaylist(id, market);
+					
+					case "artist":
+						return await this.searchArtistTopTracks(id, market);
+				
+					default:
+						throw new Error(`Unsupported Spotify link type: ${linkType}`);
+				}
+			}
+
 			const response = await axios.get(
 				'https://api.spotify.com/v1/search',
 				{
@@ -68,7 +109,7 @@ export class SpotifyProvider implements IProvider {
 		}
 	}
 
-	async searchTrack(id: Required<string>, market: string = "EN"): Promise<TrackResponse> {
+	async searchTrack(id: Required<string>, market: string = "US"): Promise<TrackResponse> {
 		const token = await this.getSpotifyAuth()
 
 		try {
@@ -90,12 +131,17 @@ export class SpotifyProvider implements IProvider {
 		}
 	}
 
-	async searchPlaylist(playlist_id: Required<string>, market: string = "EN"): Promise<PlaylistTrackObject[]> {
+	async searchPlaylist(playlist_id: Required<string>, market: string = "US"): Promise<ExtendedPlaylistResponse> {
 		const token = await this.getSpotifyAuth()
 
 		let allTracks: PlaylistTrackObject[] = [];
 		let offset = 0;
 		const limit = 100;
+
+		let playlistName = '';
+		let playlistUrl = '';
+		let playlistOwner: UserObject | null = null;
+		let playlistImages: ImageObject[] = [];
 
 		try {
 			while (true) {
@@ -112,8 +158,15 @@ export class SpotifyProvider implements IProvider {
 				);
 	
 				const data = response.data as PlaylistResponse;
-	
-				const tracks = data.tracks.items as PlaylistTrackObject[];
+
+				if (offset === 0) {
+					playlistName = data.name;
+					playlistUrl = data.external_urls.spotify;
+					playlistOwner = data.owner;
+					playlistImages = data.images;
+				}
+
+				const tracks = data.tracks.items;
 				allTracks.push(...tracks);
 	
 				if (tracks.length < limit) break;
@@ -121,20 +174,27 @@ export class SpotifyProvider implements IProvider {
 				offset += limit;
 			}
 
-			return allTracks;
+			return  {
+				playlistName,
+				playlistUrl,
+				playlistOwner: playlistOwner!,
+				playlistImages,
+				tracks: allTracks
+			};
 		} catch (error) {
 			throw new Error(`Error search with Spotify: ${error}`);
 		}
 	}
 
-	async searchAlbum(album_id: Required<string>, market: string = "EN"): Promise<AlbumResponse> {
+	async searchAlbum(album_id: Required<string>, market: string = "US"): Promise<AlbumResponse> {
 		const token = await this.getSpotifyAuth()
 
 		try {
-			const url = `https://api.spotify.com/v1/albums/${album_id}?market=${market}`;
+			const url = `https://api.spotify.com/v1/albums/${album_id}`;
     
 			const response = await axios.get(url, {
-				headers: { 'Authorization': `Bearer ${token}` }
+				headers: { 'Authorization': `Bearer ${token}` },
+				params: { market }
 			});
 
 			return response.data as AlbumResponse;
@@ -146,17 +206,38 @@ export class SpotifyProvider implements IProvider {
 		}
 	}
 
-	async searchArtist(id: Required<string>, market: string = "EN"): Promise<ArtistResponse> {
+	async searchArtist(id: Required<string>, market: string = "US"): Promise<ArtistResponse> {
 		const token = await this.getSpotifyAuth()
 
 		try {
-			const url = `https://api.spotify.com/v1/artists/${id}?market=${market}`;
+			const url = `https://api.spotify.com/v1/artists/${id}`;
     
 			const response = await axios.get(url, {
-				headers: { 'Authorization': `Bearer ${token}` }
+				headers: { 'Authorization': `Bearer ${token}` },
+				params: { market }
 			});
 
 			return response.data as ArtistResponse;
+		} catch (error) {
+			if (error instanceof Error) {
+				throw new Error(`Error search with Spotify: ${error.message}`);
+			}
+			throw new Error("Unknown error occurred while search with Spotify.");
+		}
+	}
+
+	async searchArtistTopTracks(id: Required<string>, market: string = "US"): Promise<TrackObject> {
+		const token = await this.getSpotifyAuth()
+
+		try {
+			const url = `https://api.spotify.com/v1/artists/${id}/top-tracks`;
+    
+			const response = await axios.get(url, {
+				headers: { 'Authorization': `Bearer ${token}` },
+				params: { market }
+			});
+
+			return response.data.tracks as TrackObject;
 		} catch (error) {
 			if (error instanceof Error) {
 				throw new Error(`Error search with Spotify: ${error.message}`);

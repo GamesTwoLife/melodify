@@ -1,6 +1,6 @@
 {
   "name": "@gamestwolife/melodify",
-  "version": "1.0.14",
+  "version": "1.0.15-dev",
   "description": "A stable and updated music service",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

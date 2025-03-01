@@ -70,7 +70,8 @@ export interface TrackObject {
 export interface EpisodeObject {
 	/**
 	 * @deprecated
-	 * @description A URL to a 30 second preview (MP3 format) of the episode. null if not available.
+	 * @description A URL to a 30 second preview (MP3 format) of the episode.
+	 * null if not available.
 	 */
 	audio_preview_url: Required<string | null>,
 	description: Required<string>,
@@ -87,7 +88,8 @@ export interface EpisodeObject {
 	is_playable: Required<boolean>,
 	/**
 	 * @deprecated
-	 * @description The language used in the episode, identified by a ISO 639 code. This field is deprecated and might be removed in the future. Please use the languages field instead.
+	 * @description The language used in the episode, identified by a ISO 639 code.
+	 * This field is deprecated and might be removed in the future. Please use the languages field instead.
 	 */
 	language: Required<string>,
 	name: Required<string>,
@@ -159,6 +161,29 @@ export interface PlaylistTrackObject {
 	},
 	is_local: boolean,
 	track: TrackObject | EpisodeObject
+}
+
+export interface UserObject {
+	external_urls: {
+		spotify: string
+	},
+	followers: {
+		href: string | null,
+		total: number
+	},
+	href: string,
+	id: string,
+	type: "user",
+	uri: string,
+	display_name: string | null
+}
+
+export interface ExtendedPlaylistResponse {
+    playlistName: string;
+    playlistUrl: string;
+    playlistOwner: UserObject;
+    playlistImages: ImageObject[];
+    tracks: PlaylistTrackObject[];
 }
 
 export interface SimplifiedTrackObject {

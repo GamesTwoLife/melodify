@@ -48,30 +48,33 @@ export class DownloadManager {
 		const outputPath = resolve(this.downloadPath, `${searchQuery}.%(ext)s`);
 
 		const args = [
-			'-x', 
-			'--audio-format', format, 
-			'--audio-quality', '0',
-			'--add-metadata', 
+			"--no-cache-dir",
+			'-x',
+			"-f", `bestaudio[ext=${format}]/bestaudio`,
+			"--audio-quality", "0",
+			"--add-metadata",
 			'--prefer-ffmpeg', 
-			'-o', outputPath, 
-			`ytsearch:"${searchQuery}"`
+			"-o", outputPath,
+			"--print", "after_move:filepath",
+			`ytsearch1:"${searchQuery} (Official Video)"`
 		];
 
-		return new Promise((resolve, reject) => {
-			const process = spawn("yt-dlp", args);
-			let output = '';
+		const process = spawn("yt-dlp", args);
+		let output = '';
 
+		return new Promise((resolve, reject) => {
 			process.stdout.on('data', (data) => (output += data.toString()));
 
 			process.on('close', (code) => {
-				if (code === 0) {
-					const filePath = output.trim().split('\n').pop();
-					if (filePath) {
-						resolve(filePath);
-					} else {
-						reject(new Error('Could not get the path to the file'));
-					}
-				} else {
+				if (code !== 0) {
+					return reject(new Error(`yt-dlp failed with code ${code}`));
+				}
+
+				try {
+					const filePath = output.trim()
+
+					resolve(filePath);
+				} catch {
 					reject(new Error(`yt-dlp failed with an error (code ${code})`));
 				}
 			});
