@@ -2,6 +2,9 @@ import { AlbumResponse, ArtistResponse, ExtendedPlaylistResponse, PlaylistRespon
 
 export type SearchItemType = 'album' | 'artist' | 'playlist' | 'track' | 'show' | 'episode' | 'audiobook';
 
+/**
+ * @deprecated This interface is deprecated and will be removed in future versions.
+ */
 export interface IProvider {
 	getAvailableMarkets(): Promise<{ markets: string[]; }>;
 	search(

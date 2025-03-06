@@ -1,4 +1,4 @@
-> A stable and updated music service
+> A stable, updated and powerful music library with support for Spotify and YouTube.
 
 [![npm](https://img.shields.io/npm/v/@gamestwolife/melodify?style=flat-square)](https://www.npmjs.com/package/@gamestwolife/melodify)
 ![Github Stars](https://img.shields.io/github/stars/GamesTwoLife/melodify?style=flat-square)

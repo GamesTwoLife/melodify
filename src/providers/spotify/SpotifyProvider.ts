@@ -1,12 +1,15 @@
 import axios from "axios";
-import { AlbumResponse, ArtistResponse, ExtendedPlaylistResponse, ImageObject, PlaylistResponse, PlaylistTrackObject, SearchItemsResponse, TrackObject, TrackResponse, UserObject } from "../../models";
+import { AlbumResponse, ArtistResponse, ExtendedPlaylistResponse, PlaylistResponse, PlaylistTrackObject, SearchItemsResponse, TrackObject, TrackResponse } from "../../models";
 import { IProvider, SearchItemType } from "../interfaces/IProvider";
 
+/**
+ * @deprecated This class is deprecated and will be removed in future versions.
+ */
 export class SpotifyProvider implements IProvider {
-	private readonly clientId: string;
-	private readonly clientSecret: string;
+	private readonly clientId: string | null = null;
+	private readonly clientSecret: string | null = null;
 
-	constructor(clientId: string, clientSecret: string) {
+	constructor(clientId: string | null, clientSecret: string | null) {
 		this.clientId = clientId;
 		this.clientSecret = clientSecret;
 

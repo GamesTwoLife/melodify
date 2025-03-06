@@ -2,6 +2,103 @@ type AlbumType = "album" | "single" | "compilation";
 type ReleaseDatePrecision = "year" | "month" | "day";
 type RestrictionsReason = "market" | "product" | "explicit";
 
+export type Market = "AD" | "AE" | "AG" | "AL" | "AM" | "AO" | "AR" | "AT" | "AU" | "AZ" | "BA" | "BB" | "BD" | "BE" | "BF" | "BG" | "BH" | "BI" | "BJ" | "BN" | "BO" | "BR" | "BS" | "BT" | "BW" | "BY" | "BZ" | "CA" | "CD" | "CG" | "CH" | "CI" | "CL" | "CM" | "CO" | "CR" | "CV" | "CW" | "CY" | "CZ" | "DE" | "DJ" | "DK" | "DM" | "DO" | "DZ" | "EC" | "EE" | "EG" | "ES" | "ET" | "FI" | "FJ" | "FM" | "FR" | "GA" | "GB" | "GD" | "GE" | "GH" | "GM" | "GN" | "GQ" | "GR" | "GT" | "GW" | "GY" | "HK" | "HN" | "HR" | "HT" | "HU" | "ID" | "IE" | "IL" | "IN" | "IQ" | "IS" | "IT" | "JM" | "JO" | "JP" | "KE" | "KG" | "KH" | "KI" | "KM" | "KN" | "KR" | "KW" | "KZ" | "LA" | "LB" | "LC" | "LI" | "LK" | "LR" | "LS" | "LT" | "LU" | "LV" | "LY" | "MA" | "MC" | "MD" | "ME" | "MG" | "MH" | "MK" | "ML" | "MN" | "MO" | "MR" | "MT" | "MU" | "MV" | "MW" | "MX" | "MY" | "MZ" | "NA" | "NE" | "NG" | "NI" | "NL" | "NO" | "NP" | "NR" | "NZ" | "OM" | "PA" | "PE" | "PG" | "PH" | "PK" | "PL" | "PR" | "PS" | "PT" | "PW" | "PY" | "QA" | "RO" | "RS" | "RW" | "SA" | "SB" | "SC" | "SE" | "SG" | "SI" | "SK" | "SL" | "SM" | "SN" | "SR" | "ST" | "SV" | "SZ" | "TD" | "TG" | "TH" | "TJ" | "TL" | "TN" | "TO" | "TR" | "TT" | "TV" | "TW" | "TZ" | "UA" | "UG" | "US" | "UY" | "UZ" | "VC" | "VE" | "VN" | "VU" | "WS" | "XK" | "ZA" | "ZM" | "ZW"
+
+export enum LoadType {
+	SEARCH = "search",
+	TRACK = "track",
+	ARTIST = "artist",
+	ALBUM = "album",
+	PLAYLIST = "playlist",
+	VIDEO = "video"
+}
+
+export interface SearchResult {
+	loadType: LoadType.SEARCH;
+	data: Omit<SearchItemsResponse, "audiobooks" | "episodes" | "shows">
+}
+
+export interface TrackResult {
+	loadType: LoadType.TRACK;
+	data: {
+		id: string;
+		name: string;
+		artists: SimplifiedArtistObject[];
+		images: ImageObject[];
+		duration: number;
+		url: string;
+	}[] | null;
+}
+
+export interface ArtistResult {
+	loadType: LoadType.ARTIST;
+	data: {
+		id: string;
+		name: string;
+		images: ImageObject[];
+		url: string;
+		tracks: {
+			id: string;
+			name: string;
+			artists: string;
+			images: ImageObject[];
+			duration: number;
+			url: string;
+		}[];
+	};
+}
+
+export interface AlbumResult {
+	loadType: LoadType.ALBUM;
+	data: {
+		id: string;
+		name: string;
+		images: ImageObject[];
+		url: string;
+		tracks: {
+			id: string;
+			name: string;
+			artists: ArtistObject[];
+			duration: number;
+			url: string;
+		}[];
+	};
+}
+
+export interface PlaylistResult {
+	loadType: LoadType.PLAYLIST;
+	data: {
+		id: string;
+		name: string;
+		artists: {
+			external_urls: {
+				spotify: string;
+			};
+			href: string;
+			id: string;
+			name: string;
+			uri: string;
+		};
+		images: ImageObject[];
+		url: string;
+	};
+}
+
+export interface VideoResult {
+	loadType: LoadType.VIDEO;
+	data: {
+		id: string;
+		name: string;
+		channel: string;
+		images: {
+			url: string;
+			width: number;
+			height: number;
+		};
+		url: string;
+	}[];
+}
+
 export interface ImageObject {
 	url: Required<string>,
 	height: Required<number | null>,
@@ -280,7 +377,7 @@ export interface SimplifiedPlaylistObject {
 		href: string,
 		total: number
 	},
-	type: string,
+	type: "playlist",
 	uri: string
 }
 

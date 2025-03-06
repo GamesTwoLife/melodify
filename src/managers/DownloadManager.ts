@@ -13,6 +13,11 @@ export type AudioFormat =
 	'vorbis' |
 	'wav'
 
+function isValidUrl(str: string) {
+		const pattern = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
+		return pattern.test(str);
+}
+
 export class DownloadManager {
 	public readonly downloadPath: string = resolve(__dirname, "../../../../downloads");
 	private ytDlpChecked = false;
@@ -45,18 +50,13 @@ export class DownloadManager {
 	async downloadAudio(searchQuery: string, format: AudioFormat = 'best'): Promise<string> {
 		await this.checkYtDlpInstallation();
 
-		const outputPath = resolve(this.downloadPath, `${searchQuery}.%(ext)s`);
+		const outputPath = resolve(this.downloadPath, "%(title)s.%(ext)s");
 
 		const args = [
-			"--no-cache-dir",
-			'-x',
-			"-f", `bestaudio[ext=${format}]/bestaudio`,
-			"--audio-quality", "0",
-			"--add-metadata",
-			'--prefer-ffmpeg', 
-			"-o", outputPath,
-			"--print", "after_move:filepath",
-			`ytsearch1:"${searchQuery} (Official Video)"`
+			'-x', '--extract-audio', '--audio-format', format,
+			"--audio-quality", "0", "--add-metadata",
+			"-o", outputPath, "--print", "after_move:filepath",
+			`ytsearch:"${searchQuery}${isValidUrl(searchQuery) ? "" : " (Official Video)"}"`
 		];
 
 		const process = spawn("yt-dlp", args);
