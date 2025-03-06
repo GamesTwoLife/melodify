@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AlbumResponse, ArtistResponse, PlaylistResponse, SearchItemsResponse, LoadType, TrackObject, TrackResult, ArtistResult, AlbumResult, PlaylistResult, VideoResult, SearchResult, Market, TrackResponse } from "../models";
+import { AlbumResponse, ArtistResponse, PlaylistResponse, SearchItemsResponse, LoadType, TrackObject, TrackResult, ArtistResult, AlbumResult, PlaylistResult, VideoResult, SearchResult, Market, TrackResponse, VideoPlaylistResult, PlaylistTrackObject } from "../models";
 import { TypedEventEmitter } from "../Utils";
 
 interface SearchOptions {
@@ -22,14 +22,71 @@ interface YTSearchResponse {
 		title: string;
 		description: string;
 		thumbnails: {
+			default: {
+				url: string;
+				width: number;
+				height: number;
+			},
+			medium: {
+				url: string;
+				width: number;
+				height: number;
+			},
+			high: {
+				url: string;
+				width: number;
+				height: number;
+			},
+			standard: {
+				url: string;
+				width: number;
+				height: number;
+			},
+			maxres: {
+				url: string;
+				width: number;
+				height: number;
+			}
+		},
+		channelTitle: string;
+		playlistId: string;
+		position: number;
+		resourceId: { kind: string; videoId: string; };
+		videoOwnerChannelTitle: string;
+		videoOwnerChannelId: string;
+	}
+}
+
+interface YTSearchPLaylistResponse {
+	kind: string,
+	etag: string,
+	nextPageToken: string,
+	items: YTSearchResponse[],
+	pageInfo: { totalResults: number; resultsPerPage: number; }
+}
+
+interface YTPlaylistInfo {
+	kind: string,
+	etag: string,
+	id: string,
+	snippet: {
+		publishedAt: string;
+		title: string;
+		description: string;
+		thumbnails: {
 			default: { url: string; width: number; height: number; },
 			medium: { url: string; width: number; height: number; },
 			high: { url: string; width: number; height: number; },
-		},
+			standard: { url: string; width: number; height: number; },
+			maxres: { url: string; width: number; height: number; },
+		};
 		channelTitle: string;
-		liveBroadcastContent: string;
-		publishTime: string;
-	}
+		localized: {
+			title: string;
+			description: string;
+		};
+	},
+	contentDetails: { itemCount: string; }
 }
 
 // Interfaces are not final, but types are, and therefore has an index signature
@@ -116,7 +173,7 @@ export class SearchProvider extends TypedEventEmitter<SearchProviderEvents> {
 		}
 	}
 
-	public async search(query: string, market: Market = "US"): Promise<TrackResult | ArtistResult | AlbumResult | PlaylistResult | VideoResult | SearchResult> {
+	public async search(query: string, market: Market = "US"): Promise<TrackResult | ArtistResult | AlbumResult | PlaylistResult | VideoResult | VideoPlaylistResult | SearchResult> {
 		try {
 			const spotifyRegex = /https:\/\/open\.spotify\.com\/(track|artist|album|playlist)\/([a-zA-Z0-9]{22})/;
 			const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:.*[?&](?:v=|list=)|playlist\?list=)|youtu\.be\/)([^"&?\/\s]{11,34})/;
@@ -168,10 +225,11 @@ export class SearchProvider extends TypedEventEmitter<SearchProviderEvents> {
 				const videoOrPlaylistId = youtubeMatch[1];
 				if (videoOrPlaylistId.startsWith("PL") || videoOrPlaylistId.startsWith("UU") || videoOrPlaylistId.startsWith("RD")) {
 					const res = await this.searchYoutube(videoOrPlaylistId, "playlist");
+
 					return {
-						loadType: LoadType.VIDEO,
+						loadType: LoadType.VIDEO_PLAYLIST,
 						data: res
-					} as VideoResult;
+					} as unknown as VideoPlaylistResult;
 				} else {
 					const res = await this.searchYoutube(videoOrPlaylistId, "video");
 					return {
@@ -257,14 +315,39 @@ export class SearchProvider extends TypedEventEmitter<SearchProviderEvents> {
 
 	private async searchSpotifyPlaylist(playlistId: string, market: Market = "US") {
 		const token = await this.getSpotifyAccessToken();
-
+		let allTracks: PlaylistTrackObject[] = [];
+		let offset = 0;
+		const limit = 100;
+		
 		try {
 			const response = await axios.get(`${this.spotifyBaseUrl}/playlists/${playlistId}`, {
 				headers: { Authorization: `Bearer ${token}` },
-				params: { market: market }
+				params: { market, limit: 100, offset: 0 }
 			});
 	
 			const resData = response.data as PlaylistResponse;
+
+			while (true) {
+				const tracksResponse = await axios.get(
+					`${this.spotifyBaseUrl}/playlists/${playlistId}/tracks`,
+					{
+						headers: { Authorization: `Bearer ${token}` },
+						params: {
+							market,
+							limit: limit.toString(),
+							offset: offset.toString()
+						}
+					}
+				);
+	
+				const tracksData = tracksResponse.data.items as PlaylistTrackObject[];
+
+				allTracks.push(...tracksData);
+
+				if (tracksData.length < limit) break;
+
+				offset += limit;
+			}
 
 			return {
 				id: resData.id,
@@ -277,8 +360,9 @@ export class SearchProvider extends TypedEventEmitter<SearchProviderEvents> {
 					uri: resData.owner.uri
 				},
 				images: resData.images,
-				url: resData.external_urls.spotify
-			}
+				url: resData.external_urls.spotify,
+				tracks: allTracks
+			};
 		} catch (error) {
 			this.emit('error', error);
 			throw new Error(`Unexpected error while searching on Spotify: ${error}`);
@@ -353,35 +437,146 @@ export class SearchProvider extends TypedEventEmitter<SearchProviderEvents> {
 	}
 
 	private async searchYoutube(query: string, type: "video" | "playlist") {
+		switch (type) {
+			case "video":
+				{
+					try {
+						const response = await axios.get(`${this.youtubeBaseUrl}/search`, {
+							params: {
+								q: query,
+								type: type,
+								part: "snippet",
+								maxResults: 1,
+								key: this.apiKey
+							}
+						});
+
+						const resData = response.data.items[0] as YTSearchResponse;
+				
+						return {
+							id: resData.id.videoId,
+							name: resData.snippet.title,
+							channel: resData.snippet.channelTitle,
+							images: {
+								url: resData.snippet.thumbnails.high.url,
+								width: resData.snippet.thumbnails.high.width,
+								height: resData.snippet.thumbnails.high.height,
+							},
+							url: `https://www.youtube.com/watch?v=${resData.id.videoId}`,
+						};
+					} catch (error) {
+						this.emit('error', error);
+			
+						if (axios.isAxiosError(error)) {
+							const status = error.response?.status;
+							const data = error.response?.data;
+				
+							if (status === 403 && data?.error?.errors?.some((e: any) => e.reason === "rateLimitExceeded")) {
+								const retryAfter = error.response?.headers["retry-after"];
+								const retrySeconds = retryAfter ? parseInt(retryAfter, 10) : null;
+				
+								throw new Error(
+									retrySeconds
+										? `YouTube rate limit exceeded. Try again in ${retrySeconds} seconds.`
+										: "YouTube rate limit exceeded. Try again later."
+								);
+							}
+				
+							if (status === 403) {
+								throw new Error("YouTube API access denied (check quota, billing, or project permissions).");
+							}
+				
+							throw new Error(`YouTube API error: ${error.message}`);
+						}
+			
+						throw new Error(`Unexpected error while searching on YouTube: ${error}`);
+					}
+				};
+
+			case "playlist":
+				{
+					try {
+						const pl_info = await this.getPlaylistInfo(query);
+						let videos: VideoPlaylistResult["data"]["tracks"][0][] = [];
+						let nextPageToken: string | undefined = undefined;
+
+						do {
+							const response = await axios.get(`${this.youtubeBaseUrl}/playlistItems`, {
+								params: {
+									part: "snippet",
+									playlistId: query,
+									maxResults: 50,
+									pageToken: nextPageToken,
+									key: this.apiKey
+								}
+							});
+				
+							const resData = response.data as YTSearchPLaylistResponse;
+
+							videos.push(...resData.items.map((item) => ({
+								id: `${item.snippet.resourceId.videoId}`,
+								name: item.snippet.title,
+								channel: item.snippet.videoOwnerChannelTitle,
+								images: item.snippet.thumbnails,
+								url: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`,
+							})));
+					
+							nextPageToken = resData.nextPageToken;
+						} while (nextPageToken);
+
+						return {
+							name: pl_info.snippet.title,
+							author: pl_info.snippet.channelTitle,
+							images: pl_info.snippet.thumbnails,
+							tracks: videos
+						};
+					} catch (error) {
+						this.emit('error', error);
+			
+						if (axios.isAxiosError(error)) {
+							const status = error.response?.status;
+							const data = error.response?.data;
+				
+							if (status === 403 && data?.error?.errors?.some((e: any) => e.reason === "rateLimitExceeded")) {
+								const retryAfter = error.response?.headers["retry-after"];
+								const retrySeconds = retryAfter ? parseInt(retryAfter, 10) : null;
+				
+								throw new Error(
+									retrySeconds
+										? `YouTube rate limit exceeded. Try again in ${retrySeconds} seconds.`
+										: "YouTube rate limit exceeded. Try again later."
+								);
+							}
+				
+							if (status === 403) {
+								throw new Error("YouTube API access denied (check quota, billing, or project permissions).");
+							}
+				
+							throw new Error(`YouTube API error: ${error.message}`);
+						}
+			
+						throw new Error(`Unexpected error while searching on YouTube: ${error}`);
+					}
+				};
+		}
+	}
+
+	private async getPlaylistInfo(playlistId: string) {
 		try {
-			const response = await axios.get(`${this.youtubeBaseUrl}/search`, {
+			const response = await axios.get(`${this.youtubeBaseUrl}/playlists`, {
 				params: {
-					q: query,
-					part: "snippet",
-					maxResults: 25,
-					type: type,
+					part: "snippet,contentDetails",
+					id: playlistId,
 					key: this.apiKey
 				}
 			});
-
-			const resData = response.data.items as YTSearchResponse[];
 	
-			return resData.map(item => ({
-				id: `${item.id.videoId || item.id.playlistId}`,
-				name: item.snippet.title,
-				channel: item.snippet.channelTitle,
-				images: {
-					url: item.snippet.thumbnails.high.url,
-					width: item.snippet.thumbnails.high.width,
-					height: item.snippet.thumbnails.high.height,
-				},
-				url: type === "video"
-					? `https://www.youtube.com/watch?v=${item.id.videoId}`
-					: `https://www.youtube.com/playlist?list=${item.id.playlistId}`,
-			}));
+			const playlist = response.data.items[0] as YTPlaylistInfo;
+
+			return playlist;
 		} catch (error) {
 			this.emit('error', error);
-
+	
 			if (axios.isAxiosError(error)) {
 				const status = error.response?.status;
 				const data = error.response?.data;
@@ -403,8 +598,9 @@ export class SearchProvider extends TypedEventEmitter<SearchProviderEvents> {
 	
 				throw new Error(`YouTube API error: ${error.message}`);
 			}
-
-			throw new Error(`Unexpected error while searching on YouTube: ${error}`);
+	
+			throw new Error(`Unexpected error while fetching playlist info: ${error}`);
 		}
 	}
+	
 }

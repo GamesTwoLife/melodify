@@ -10,7 +10,8 @@ export enum LoadType {
 	ARTIST = "artist",
 	ALBUM = "album",
 	PLAYLIST = "playlist",
-	VIDEO = "video"
+	VIDEO = "video",
+	VIDEO_PLAYLIST = "video_playlist"
 }
 
 export interface SearchResult {
@@ -82,6 +83,7 @@ export interface PlaylistResult {
 		};
 		images: ImageObject[];
 		url: string;
+		tracks: PlaylistTrackObject[];
 	};
 }
 
@@ -97,7 +99,27 @@ export interface VideoResult {
 			height: number;
 		};
 		url: string;
-	}[];
+	};
+}
+
+export interface VideoPlaylistResult {
+	loadType: LoadType.VIDEO_PLAYLIST;
+	data: {
+		name: string;
+		author: string;
+		images: string;
+		tracks: {
+			id: string;
+			name: string;
+			channel: string;
+			images: {
+				default: { url: string; width: number; height: number; },
+				medium: { url: string; width: number; height: number; },
+				high: { url: string; width: number; height: number; },
+			};
+			url: string;
+		}[];
+	};
 }
 
 export interface ImageObject {
