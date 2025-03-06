@@ -21,13 +21,14 @@ export interface SearchResult {
 export interface TrackResult {
 	loadType: LoadType.TRACK;
 	data: {
+		type: "track";
 		id: string;
 		name: string;
 		artists: SimplifiedArtistObject[];
 		images: ImageObject[];
 		duration: number;
 		url: string;
-	}[] | null;
+	};
 }
 
 export interface ArtistResult {

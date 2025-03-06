@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AlbumResponse, ArtistResponse, PlaylistResponse, SearchItemsResponse, LoadType, TrackObject, TrackResult, ArtistResult, AlbumResult, PlaylistResult, VideoResult, SearchResult, Market } from "../models";
+import { AlbumResponse, ArtistResponse, PlaylistResponse, SearchItemsResponse, LoadType, TrackObject, TrackResult, ArtistResult, AlbumResult, PlaylistResult, VideoResult, SearchResult, Market, TrackResponse } from "../models";
 import { TypedEventEmitter } from "../Utils";
 
 interface SearchOptions {
@@ -134,7 +134,7 @@ export class SearchProvider extends TypedEventEmitter<SearchProviderEvents> {
 
 							return {
 								loadType: LoadType.TRACK,
-								data: res || null
+								data: res
 							} as TrackResult;
 						}
 					case "artist":
@@ -233,29 +233,22 @@ export class SearchProvider extends TypedEventEmitter<SearchProviderEvents> {
 		const token = await this.getSpotifyAccessToken();
 
 		try {
-			const response = await axios.get(`${this.spotifyBaseUrl}/search`, {
-				headers: {
-					Authorization: `Bearer ${token}`
-				},
-				params: {
-					q: trackId,
-					type: "track",
-					market: market,
-					limit: 25,
-					offset: 0
-				}
+			const response = await axios.get(`${this.spotifyBaseUrl}/tracks/${trackId}`, {
+				headers: { Authorization: `Bearer ${token}` },
+				params: { market: market }
 			});
 	
-			const resData = response.data as Omit<SearchItemsResponse, "playlists" | "artists" | "albums" | "audiobooks" | "episodes" | "shows">;
+			const resData = response.data as TrackResponse;
 
-			return resData.tracks?.items.map((track) => ({
-				id: track.id,
-				name: track.name,
-				artists: track.artists,
-				images: track.album.images,
-				duration: track.duration_ms,
-				url: track.external_urls.spotify
-			}));
+			return {
+				type: resData.type,
+				id: resData.id,
+				name: resData.name,
+				artists: resData.artists,
+				images: resData.album.images,
+				duration: resData.duration_ms,
+				url: resData.external_urls.spotify
+			};
 		} catch (error) {
 			this.emit('error', error);
 			throw new Error(`Unexpected error while searching on Spotify: ${error}`);

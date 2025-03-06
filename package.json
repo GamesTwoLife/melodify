@@ -1,6 +1,6 @@
 {
   "name": "@gamestwolife/melodify",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "A stable, updated and powerful music library with support for Spotify and YouTube.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
